@@ -79,7 +79,7 @@ ROOT_DIR = os.path.abspath('.')
 # This where all the Packages are cached instead of reinstalling them every new runtime
 PACKAGES_DIR = f'{ROOT_DIR}/Packages'  # Directory for caching packages.
 
-DATASET_DIR = f'{ROOT_DIR}/Dataset'  # Directory for storing datasets.
+DATASET_DIR = f'{ROOT_DIR}/data'  # Directory for storing datasets.
 DATASET_NAME = 'green_tripdata_2016-10.csv'  # Name of the dataset file.
 
 # This is where the figures are saved
@@ -133,12 +133,6 @@ FIXED_COLUMNS_NAMES = []
 ORIGINAL_COLUMNS_NAMES = []
 
 
-# #### Lookup tables dictionaries <a id="lookup"></a>
-# 
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# In[6]:
 
 
 LOOKUP_TABLE = {}    # An empty list used as a general lookup table.
@@ -681,7 +675,7 @@ def contains_missing_values(df: pd.DataFrame, column_name: str, missing_pattern=
                 f'Column "{column_name}" contains {num_missing_values} missing values as a string which is {(num_missing_values/len(df))*100}%.')
             flag = True
             # Replace matched values with 'unknown' for object columns
-            df[column_name] = df[column_name].str.replace(pattern, 'unknown')
+            df[column_name] = df[column_name].str.replace(pattern, 'unknown',regex=True)
 
         else:
             print(
@@ -1182,13 +1176,10 @@ def calculate_total_time(df: pd.DataFrame, start_date_column: str, end_date_colu
     feature_engineer('total_trip_time_hr', 'the total trip time in hours',
                      df['total_trip_time_hr'].dtype.name)
     # Create the 'Week number' column
-    df['week_number_yearly'] = df[start_date_column].dt.week
+    df['week_number_yearly'] = df[start_date_column].dt.isocalendar().week
+
     feature_engineer('week_number_yearly', 'the week number of the year',
                      df['week_number_yearly'].dtype.name)
-
-    df['week_number_monthly'] = df[start_date_column].dt.week % 4
-    feature_engineer('week_number_monthly', 'the week number of the month',
-                     df['week_number_monthly'].dtype.name)
 
     # Create the 'Date range' column with the start and end dates of each week
     df['date_range'] = df[start_date_column].dt.to_period('W').dt.strftime(
