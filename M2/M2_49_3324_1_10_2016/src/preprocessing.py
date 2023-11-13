@@ -391,585 +391,8 @@ def empty_folders():
 empty_folders()
 
 
-# In[14]:
 
 
-def save_figure(title: str, save_path=FIGURES_DIR) -> str:
-    """
-    Saving Figures in the Figures Directory 
-    returns the full path of the saved figure
-    """
-    # Create the directory if it doesn't exist
-    os.makedirs(save_path, exist_ok=True)
-
-    figure_count = FIGURES.get(title, 0)+1
-    FIGURES[title] = figure_count
-
-    # Construct the filename with the title and figure count
-    filename = f'{title}-{figure_count}.png'
-
-    # Save the figure to the specified path
-    full_path = os.path.join(save_path, filename)
-    plt.savefig(full_path)
-    return full_path
-
-
-# In[15]:
-
-
-def load_and_display_figure(figure_path: str) -> bool:
-    """
-    Load and display a saved figure.
-    """
-    try:
-        # Load the image
-        image = mpimg.imread(figure_path)
-
-        # Display the image
-        plt.imshow(image)
-        print(f"Figure loaded from path: {figure_path}")
-        plt.axis('off')  # Optionally, turn off axis labels
-        plt.show()
-        return True
-
-    except FileNotFoundError:
-        print(f"Figure not found at path: {figure_path}")
-        return False
-
-
-# In[16]:
-
-
-def history_to_dataframe(history_track):
-    """ to convert HISTORY_TRACK into a DataFrame  (here I flattend the column info)"""
-    flattened_data = []
-
-    for entry in history_track:
-        entry_data = {
-            'Message': entry['Message'],
-            'Number of Rows': entry['Number of Rows'],
-            'Number of Columns': entry['Number of Columns'],
-            'Count of Exist Null Entries': entry['Count of Exist Null Entries'],
-            'Count of All Null Entries': entry['Count of All Null Entries'],
-            'Percentage of All Null Entries': entry['Percentage of All Null Entries'],
-            'Percentage of Exist Null Entries': entry['Percentage of Exist Null Entries'],
-            'Step': entry['Step'],
-        }
-
-        # Flatten the "Column Info" dictionaries into separate columns
-        for col_info in entry["Column Info"]:
-            col_name = col_info["Column Name"]
-            entry_data[f"{col_name}_Data Type"] = col_info["Data Type"]
-            entry_data[f"{col_name}_Total Null Entries"] = col_info["Total Null Entries"]
-            entry_data[f"{col_name}_Percentage of Null Entries"] = col_info["Percentage of Null Entries"]
-
-    flattened_data.append(entry_data)
-
-    return pd.DataFrame(flattened_data)
-
-
-def status(df: pd.DataFrame, message: str) -> pd.DataFrame:
-    """
-    print the status of the dataframe and track the history of the status of the dataframe and its attributes
-    """
-    num_columns = len(df.columns)
-    num_rows = len(df)
-
-    column_info = []
-
-    unique_column_names = []
-
-    for column_name in df.columns:
-        perc_unique = (len(df[column_name].unique()) / len(df)) * 100
-
-        if perc_unique >= 90:
-            unique_column_names.append({column_name, perc_unique})
-        col_data = {
-            "Column Name": column_name,
-            "Data Type": df[column_name].dtype,
-            "Total Null Entries": df[column_name].isnull().sum(),
-            "Percentage of Null Entries": (df[column_name].isnull().mean()) * 100,
-            'Percentage of Unique Entries': perc_unique,
-        }
-        column_info.append(col_data)
-
-    # Count rows with at least one null value in any column
-    count_rows_with_nulls = (df.isnull().sum(axis=1) > 0).sum()
-    perc_exist_null = (count_rows_with_nulls / len(df)) * 100
-
-    # Count rows where all columns are null
-    count_rows_with_all_nulls = (df.isnull().sum(axis=1) == df.shape[1]).sum()
-    perc_all_null = (count_rows_with_all_nulls / len(df)) * 100
-
-    # Percentage of rows that are duplicates of other rows
-    perc_duplicate_rows = (df.duplicated().sum() / len(df)) * 100
-
-    print(f'Number of Rows: {num_rows}')
-    print(f'Number of Columns: {num_columns}')
-    print(f'Column Names: {df.columns}')
-    print(
-        f'Column Types: {[(column_name,df[column_name].dtype) for column_name in df.columns]}')
-    print(f'Percentage of All Null Entries {perc_all_null}%')
-    print(f'Percentage of Exist Null Entries {perc_exist_null}%')
-    print(f'Percentage of Duplicate Entries {perc_duplicate_rows}%')
-    print(f'Unique Column Names: {unique_column_names}')
-    HISTORY_TRACK.append({
-        'Message': message,
-        'Number of Rows': num_rows,
-        'Number of Columns': num_columns,
-        'Count of Exist Null Entries': count_rows_with_nulls,
-        'Count of All Null Entries': perc_all_null,
-        'Percentage of All Null Entries': perc_all_null,
-        'Percentage of Exist Null Entries': perc_exist_null,
-        'Percentage of Duplicate Entries': perc_duplicate_rows,
-        'Column Info': column_info,
-        'Step': CURRENT_STEP,
-    })
-    return history_to_dataframe(HISTORY_TRACK)
-
-
-# #### Different Plotting Functions with outlier detection <a id='plot'></a>
-# 
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# In[17]:
-
-
-def plot_data(df:pd.DataFrame, columns_to_plot: List[str]):
-    """
-    plot the data in the columns_to_plot list in a box plot, KDE plot, and histogram
-    """
-    num_columns = len(columns_to_plot)
-    num_rows = num_columns
-    num_cols = 3  # One column for horizontal box plot, one for KDE, and one for histogram
-
-    # Set the size of the figure
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 5 * num_rows))
-
-    for i, col in enumerate(columns_to_plot):
-        # Horizontal box plot
-        boxplot = sns.boxplot(data=df, x=col, ax=axes[i, 0], orient="h")
-        axes[i, 0].set_title(f'Horizontal Box Plot of {col}')
-        
-        # KDE plot
-        sns.kdeplot(data=df[col], ax=axes[i, 1])
-        axes[i, 1].set_title(f'KDE Plot of {col}')
-        
-        # Histogram
-        sns.histplot(data=df, x=col, ax=axes[i, 2], element="step", common_norm=False)
-        axes[i, 2].set_title(f'Histogram of {col}')
-        
-        # Adjust the y-axis limit for the box plot (customize this based on your data)
-        # For example, to set a specific range, you can use boxplot.set(ylim=(min_value, max_value))
-        # Replace min_value and max_value with your desired range.
-        # boxplot.set(ylim=(min_value, max_value))
-
-    # Remove any extra empty subplots
-    for i in range(num_columns, num_rows):
-        for j in range(num_cols):
-            fig.delaxes(axes[i, j])
-
-    plt.tight_layout()
-    plt.show()
-
-
-# In[18]:
-
-
-
-def plot_data(df, columns_to_plot):
-    num_columns = len(columns_to_plot)
-    num_rows = num_columns
-    num_cols = 3  # One column for horizontal box plot, one for KDE, and one for histogram
-
-    # Set the size of the figure and style
-    plt.figure(figsize=(30, 5 * num_rows))
-    sns.set(style="whitegrid")
-    
-    for i, col in enumerate(columns_to_plot):
-        # Create a subplot grid
-        ax1 = plt.subplot(num_rows, num_cols, i * num_cols + 1)
-        ax2 = plt.subplot(num_rows, num_cols, i * num_cols + 2)
-        ax3 = plt.subplot(num_rows, num_cols, i * num_cols + 3)
-        
-        # Horizontal box plot
-        sns.boxplot(data=df, x=col, ax=ax1, color='lightblue')
-        ax1.set_title(f'Horizontal Box Plot of {col}')
-        
-        # KDE plot
-        sns.kdeplot(data=df[col], ax=ax2, color='lightgreen', shade=True)
-        ax2.set_title(f'KDE Plot of {col}')
-        
-        # Histogram
-        sns.histplot(data=df, x=col, ax=ax3, element="step", common_norm=False, color='lightcoral')
-        ax3.set_title(f'Histogram of {col}')
-    
-    # Remove any extra empty subplots
-    for i in range(num_columns, num_rows):
-        for j in range(num_cols):
-            plt.delaxes(plt.gcf().get_axes()[i * num_cols + j])
-
-    plt.tight_layout()
-    plt.show()
-
-
-# In[19]:
-
-
-def plot_boxplot_with_outliers(df: pd.DataFrame, column_name: str, lower_multiplier=1.5, upper_multiplier=3) -> pd.DataFrame:
-    """
-    Plot a boxplot for a specific column in a DataFrame, highlights and returns outliers.
-    """
-    # Calculate quartiles and IQR
-    Q1 = df[column_name].quantile(0.25)
-    Q3 = df[column_name].quantile(0.75)
-    IQR = Q3 - Q1
-    lower_bound = Q1 - lower_multiplier * IQR
-    upper_bound = Q3 + upper_multiplier * IQR
-
-    # Filter outliers
-    outliers = df[(df[column_name] < lower_bound) |
-                  (df[column_name] > upper_bound)]
-
-    # Create a boxplot with outliers displayed
-    plt.figure(figsize=(18, 10))
-    plt.boxplot(df[column_name], vert=False,
-                showfliers=True, labels=[column_name])
-
-    if not outliers.empty:
-        plt.scatter(outliers[column_name], [1] * len(outliers),
-                    color='red', marker='x', label='Outliers')
-
-    title = f'Boxplot for {column_name} with Outliers Highlighted - IQR'.replace(
-        '_', ' ').title()
-
-    plt.xlabel(column_name)
-    plt.title(title)
-    plt.legend()
-    save_figure(title)
-    plt.show()
-
-
-# In[20]:
-
-
-def plot_kdeplots(df: pd.DataFrame, columns: List[str]):
-    """
-    Plot a distplot for each specified column and print skewness in a DataFrame.
-    """
-    # Calculate the number of subplots based on the number of columns
-    num_columns = len(columns)
-    num_rows = 1  # Set the number of rows (you can adjust this as needed)
-
-    # Create a figure with subplots
-    title = f'Distribution of {", ".join(columns)}'.replace('_', ' ').title()
-
-    fig, axes = plt.subplots(num_rows, num_columns,
-                             figsize=(num_columns * 10, 8))
-    # Ensure columns is a list
-    if not isinstance(columns, list):
-        columns = [columns]
-
-    # filter columns if they only exist in dataframe
-    columns = [column for column in columns if column in df.columns]
-
-    # Plot distplots for each specified column
-    for i, column in enumerate(columns):
-        # Use the current axis or the only axis
-        ax = axes[i] if num_columns > 1 else axes
-        sns.kdeplot(df[column], fill=True, ax=ax)
-        print(f'Column: {column} - Skewness: {df[column].skew()}')
-        ax.set_title(f'Distribution of {column}'.replace('_', ' ').title())
-
-    plt.suptitle(title)
-    SAVED_FIGURES[title] = save_figure(title)
-
-    # Show the plots
-    plt.tight_layout()
-    plt.show()
-
-
-# In[21]:
-
-
-def plot_categorical_scatter(df:pd.DataFrame, x_col:str, y_col:str):
-    """
-    Create a multi-line plot between x_col and y_col.
-    """
-    # Create the multi-line plot
-    plt.figure(figsize=(12, 6))
-    sns.stripplot(x=x_col, y=y_col, data=df, jitter=True, dodge=True)
-
-    # Set labels and title
-    plt.xlabel(x_col.capitalize())
-    plt.ylabel(y_col.capitalize())
-    plt.title(
-        f'Multi-Line Plot of {y_col.capitalize()} by {x_col.capitalize()}')
-
-    # Rotate x-axis labels for readability
-    plt.xticks(rotation=45, ha='right')
-
-    # Show the plot
-    plt.show()
-
-
-# In[22]:
-
-
-def plot_columns_relationship(df: pd.DataFrame, target_column_name: str, column_names: List[Tuple[str, str]]):
-    """
-    Plot the relationship between two columns.
-    """
-    num_columns = len(column_names)
-
-    # Create a figure with subplots
-    fig, axes = plt.subplots(1, num_columns, figsize=(20, 8))
-
-    for i, (col_name, method) in enumerate(column_names):
-        if method == 'mean':
-            sns.barplot(x=col_name, y=target_column_name, data=df, ax=axes[i])
-            axes[i].set_title(
-                f'Mean of {target_column_name} by {col_name}'.replace('_', ' ').title())
-        elif method == 'count':
-            count_df = df.groupby([col_name, target_column_name]).size().reset_index(
-                name="count").sort_values(by=['count'], ascending=False)
-            cmap = plt.get_cmap("coolwarm")
-            normalize = plt.Normalize(
-                vmin=min(count_df['count']), vmax=max(count_df['count']))
-            scatter = axes[i].scatter(
-                count_df[col_name], count_df[target_column_name], c=count_df['count'], cmap=cmap, norm=normalize)
-            axes[i].set_title(
-                f'{col_name} & {target_column_name}'.replace('_', ' ').title())
-            fig.colorbar(scatter, ax=axes[i], orientation='vertical')
-
-            # Rotate x-axis labels for readability
-            x_labels = count_df[col_name].unique()
-            x_ticks = range(len(x_labels))
-            axes[i].set_xticks(x_ticks)
-            axes[i].set_xticklabels(x_labels, rotation=45, ha="right")
-
-    plt.show()
-
-
-# In[23]:
-
-
-def plot_value_counts(df: pd.DataFrame, col_name: str):
-    """
-    Plot the value counts of a specified column in a DataFrame.
-    """
-    if (df[col_name].dtype != "object") and (df[col_name].dtype != "category"):
-        print(f"{col_name} must be categorical.")
-        return
-
-    title = f"Value Counts of {col_name}".replace('_', ' ').title()
-    plt.figure(figsize=(12, 9))
-    counts = df[col_name].value_counts()
-
-    sns.barplot(x=counts.index, y=counts.values, palette="viridis")
-    plt.title(title)
-    plt.xlabel(col_name)
-    plt.ylabel("Count")
-    plt.xticks(rotation=45)
-    # Add counts on top of the bars
-    for i, count in enumerate(counts.values):
-        plt.text(i, count, str(count), ha='center', va='bottom',
-                 fontsize=10, color='black', rotation=0)
-
-    SAVED_FIGURES[title] = save_figure(title)
-    plt.show()
-
-    return counts
-
-
-# In[24]:
-
-
-def plot_stacked_bar(preference_df: pd.DataFrame, x: str, y: str, rotation=45,title=None):
-    """
-    Plot a stacked bar chart to visualize preferences by a specific category.
-    """
-    if (df[x].dtype != "object" and df[x].dtype != "category"):
-        print(f"{x} must be categorical.")
-        return
-
-    plt.figure(figsize=(12, 9))
-    if title is None:
-        title = f'Preference by {x} with {y}'
-    if title in SAVED_FIGURES:
-        load_and_display_figure(SAVED_FIGURES[title])
-        return
-
-    pivot_df = preference_df.pivot(index=x, columns=y, values='Count')
-    ax = pivot_df.plot(kind='bar', stacked=True, figsize=(10, 6))
-    ax.set_ylabel('Count')
-    ax.set_title(title)
-    # Rotate x-axis labels for better readability
-    plt.xticks(rotation=rotation)
-    SAVED_FIGURES[title] = save_figure(title)
-
-    plt.show()
-
-
-# In[25]:
-
-
-def plot_multivariate_analysis(df: pd.DataFrame, selected_columns: List[str],title:str):
-    """
-        Perform multivariate analysis and print rows where maximum values occur for selected columns. (heavy computation)
-    """
-    title = title.replace('_', ' ').title()
-    # Print rows where maximum values occur for selected columns
-    for col in selected_columns:
-        print(f" {col} skew : {df[col].skew()}")
-    # Create a pairplot for selected columns
-    sns.pairplot(df[selected_columns], diag_kind='kde')
-    plt.suptitle(title)
-    SAVED_FIGURES[title] = save_figure(title)
-    plt.show()
-
-
-# In[26]:
-
-
-def plot_correlation_Heatmap(df: pd.DataFrame, title: str):
-    """
-    Draw a correlation heatmap for a DataFrame.
-    """
-    title = f'Correlation Heatmap - {title}'
-    plt.figure(figsize=(15, 10))
-    if title in SAVED_FIGURES:
-        load_and_display_figure(SAVED_FIGURES[title])
-        return
-    correlation = df.corr()
-    display(correlation)
-    sns.heatmap(correlation, cmap='coolwarm', annot=True, fmt='.2f')
-    plt.title(title)
-    save_figure(title)
-    plt.show()
-
-
-# In[27]:
-
-
-def plot_numeric_attributes(df: pd.DataFrame, title: str):
-    """
-    Plot density plots for numeric attributes in a DataFrame.
-    """
-    # Select only the numeric columns
-    numeric_df = df.select_dtypes(include='number')
-    display(numeric_df.describe())
-    # Define the number of rows and columns for subplots
-    num_cols = len(numeric_df.columns)
-    num_rows = (num_cols + 1) // 2  # Round up to the nearest integer
-    if title in SAVED_FIGURES:
-        plt.figure(figsize=(12, 6 * num_rows))
-        load_and_display_figure(SAVED_FIGURES[title])
-        return
-
-    # Create a figure and subplots
-    fig, axes = plt.subplots(num_rows, 2, figsize=(12, 6 * num_rows))
-    fig.subplots_adjust(hspace=0.5)
-
-    for i, col in enumerate(numeric_df.columns):
-        # Calculate the current row and column index
-        row, col_idx = divmod(i, 2)
-        ax = axes[row, col_idx]
-
-        # Attempt to create a density plot for the current numeric column
-        try:
-            sns.kdeplot(numeric_df[col], ax=ax, fill=True, warn_singular=False)
-            ax.set_xlabel(col)
-            ax.set_ylabel('Density')
-            ax.set_title(f'Density Plot of {col}')
-        except Exception as e:
-            print(f'Could not create density plot for {col}: {str(e)}')
-            fig.delaxes(ax)  # Remove the subplot if it can't be plotted
-
-    # Remove any empty subplots
-    for i in range(num_cols, num_rows * 2):
-        fig.delaxes(axes[divmod(i, 2)])
-
-    # Save the figure
-    plt.tight_layout()
-    SAVED_FIGURES[title] = save_figure(title)
-    plt.show()
-
-
-# In[28]:
-
-
-
-def plot_mean_median_count_by_period(df: pd.DataFrame, column_name: str, period_series: pd.Series, time_column: str, label: str, figsize=(9, 5)):
-    """
-    Plot the mean, median, and count values of a numeric column by hour and print a tabulated summary.
-    """
-    fig, (ax1, ax2) = plt.subplots(
-        1, 2, figsize=figsize)  # Create two subplots
-
-    # Check if the time_column is of datetime data type
-    if not pd.api.types.is_datetime64_any_dtype(df[time_column]) :
-        print(f'Convert first the {time_column} to datetime')
-        return
-
-    # Prepare a pivot table to aggregate the specified column by hour
-    table = df.pivot_table(index=period_series, values=column_name, aggfunc=(
-        'mean', 'median', 'count')).reset_index()
-
-    # Rename columns for clarity
-    table.columns = [label,  f'Count_{column_name}',
-                     f'Mean_{column_name}', f'Median_{column_name}']
-
-    # Plot the mean, median, and count values
-    table[[f'Mean_{column_name}', f'Median_{column_name}']].plot(ax=ax1)
-    ax1.set_ylabel(f'{column_name} (units)')
-    ax1.set_xlabel(label)
-    title = f'Distribution of {column_name} per {label}'.replace('_', ' ').title()
-    ax1.set_title(title)
-
-    # Plot count values in a separate plot
-    table[[f'Count_{column_name}']].plot(ax=ax2)
-    ax2.set_ylabel(f'Count of {column_name}')
-    ax2.set_xlabel(label)
-    ax2.set_title(f'Count of {column_name} per {label}'.replace('_', ' ').title())
-
-    # Print tabulated summary
-    print(f'-----{title} -----\n')
-
-    # Maximum mean value at which period
-    max_mean = table[f"Mean_{column_name}"].max()
-    max_period_mean = table[table[f"Mean_{column_name}"]
-                            == max_mean].iloc[0][label]
-    print(f'Maximum mean value ({max_mean}) at {label}: {max_period_mean}\n')
-
-    # Maximum median value at which period
-    max_median = table[f"Median_{column_name}"].max()
-    max_period_median = table[table[f"Median_{column_name}"]
-                              == max_median].iloc[0][label]
-    print(
-        f'Maximum median value ({max_median}) at {label}: {max_period_median}\n')
-
-    # Maximum count value at which period
-    max_count = table[f"Count_{column_name}"].max()
-    max_period_count = table[table[f"Count_{column_name}"]
-                             == max_count].iloc[0][label]
-    print(
-        f'Maximum count value ({max_count}) at {label}: {max_period_count}\n')
-
-    # extra validation of the above function values
-    display(df.groupby(period_series)[column_name].describe())
-
-    save_figure(title)
-    plt.show()
-
-
-# #### Checks of validity and Drop Functions <a id="checks"></a>
-# 
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# In[29]:
 
 
 def drop_column(df: pd.DataFrame, column_name: str):
@@ -1014,12 +437,6 @@ def remove_unwanted_values(df, feature, unwanted_value):
     return df[df[feature] != unwanted_value]
 
 
-# #### Imputation and Outlier Handling functions <a id='imputation'></a>
-# 
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# In[32]:
 
 
 def impute_missing_values_linear_regression(df: pd.DataFrame, target_columns: List[str], predictors=None):
@@ -1312,7 +729,6 @@ def identify_columns_needing_imputation(df: pd.DataFrame, columns=None):
     if columns_needing_imputation:
         result_df = pd.DataFrame(columns_needing_imputation).sort_values(
             by=['missing_values_unknown', 'missing_values_nan'], ascending=False).reset_index(drop=True)
-        display(result_df)
     else:
         print("No columns need imputation.")
 
@@ -1352,12 +768,6 @@ def create_bins(df: pd.DataFrame, target_column: str, bin_column_name: str, labe
         bin_column_name, f'bins for {target_column}', df[bin_column_name].dtype.name)
 
 
-# #### Encoding functions <a id='encode'></a>
-# 
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# In[41]:
 
 
 def label_encode_column(df: pd.DataFrame, column_name: str, prefix: str = ENCODED_PREFIX, map=None):
@@ -1376,7 +786,6 @@ def label_encode_column(df: pd.DataFrame, column_name: str, prefix: str = ENCODE
             insert_to_lookup_table(column_name, original_value, None, mapping,
                                    f"Encoded {column_name} from {original_value} to {mapping} by Label Encoding")
         encoded_df = pd.DataFrame(LOOKUP_TABLE[column_name])
-        display(encoded_df[~encoded_df['encoded'].isna()])
         return 
 
     label_encoder = LabelEncoder() if label_encoder is None else label_encoder
@@ -1404,7 +813,6 @@ def label_encode_column(df: pd.DataFrame, column_name: str, prefix: str = ENCODE
                                f"Encoded {column_name} from {original_value} to {mapping} by Label Encoding")
 
     encoded_df = pd.DataFrame(LOOKUP_TABLE[column_name])
-    display(encoded_df[~encoded_df['encoded'].isna()])
 
 
 def one_hot_encode_column(df: pd.DataFrame, column_name: str, prefix: str = ENCODED_PREFIX) -> pd.DataFrame:
@@ -1425,7 +833,6 @@ def one_hot_encode_column(df: pd.DataFrame, column_name: str, prefix: str = ENCO
                                f"One-Hot Encoded {column_name} from column {column_name} to {encoded_column_name} by One Hot Encoding")
     encoded_df = pd.DataFrame(LOOKUP_TABLE[column_name])
 
-    display(encoded_df[~encoded_df['encoded'].isna()])
     return df
 
 
@@ -1439,7 +846,6 @@ def binarize_column(df: pd.DataFrame,column_name:str,map: Dict[str,int],prefix: 
         insert_to_lookup_table(column_name, original_value, None, mapping,
                                f"Encoded {column_name} from {original_value} to {mapping} by Binarization into column {prefix + column_name}")
     encoded_df = pd.DataFrame(LOOKUP_TABLE[column_name])
-    display(encoded_df[~encoded_df['encoded'].isna()])
     return df
     
     
@@ -1501,36 +907,12 @@ def one_hot_decode_column(encoded_df: pd.DataFrame, column_name: str, prefix: st
     return decoded_df
 
 
-# ## 1- Extraction,Dropping Identical Rows, and Formatting - **Checkpoint 1** <a id="extraction"></a>
-# 
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# #### 1.1 loading the dataset <a id="load"></a>
-# 
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# In[43]:
-
 
 # loading the dataset
 df = pd.read_csv(os.path.join(DATASET_DIR, DATASET_NAME))
 
 
-# In[44]:
 
-
-df.head()
-
-
-# #### 1.2 format the column names <a id='format_column_names'></a>
-# 
-# - Before start we better reformat the column names
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# In[45]:
 
 
 def format_column_names(df: pd.DataFrame):
@@ -1558,13 +940,6 @@ def format_column_names(df: pd.DataFrame):
 df = format_column_names(df)
 
 
-# #### 1.3 Sort Column Names Monotonically <a id='sort_column_names'></a>
-# 
-# - Before start I think it is better to order the columns based on number of missing values in ascending order
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# In[46]:
 
 
 def sort_columns_by_missing_values(df: pd.DataFrame) -> pd.DataFrame:
@@ -1583,65 +958,13 @@ def sort_columns_by_missing_values(df: pd.DataFrame) -> pd.DataFrame:
 
 
 df = sort_columns_by_missing_values(df)
-df.head()
 
 
-# ##### 1.4 identifying the columns with missing values _(to takecare of them later)_ <a id='missing_columns'></a>
-# 
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# In[47]:
 
 
 identify_columns_needing_imputation(df)
 
 
-# ### 1.5 Exploratory Data Analysis through Description and Initial Understanding - EDA <a id="eda"><a>
-# 
-#   <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-# #### NYC Green Dataset understanding from dataset description , research and basic assumptions
-# 
-# ##### 1) Administrative data:
-# 
-# - Vendor (object): provider of the record
-# - Store and fwd flag(Categorical): This flag indicates whether the trip record was held in vehicle memory before sending to the vendor, aka “store and forward,” because the vehicle did not have a connection to the server.
-# 
-# ##### 2) Trip Data:
-# 
-# - lpep pickup datetime (datetime64): when meter was engaged
-# - lpep dropoff datetime (datetime64): when meter was disengaged.
-# - Passenger count(int64): # of passengers in the vehicle **BY DRIVER (POTENIAL SOURCE OF ERROR SINCE NOT AUTOMATIC)**
-# - Trip distance (float64): trip distance in miles reported **by taximeter**.
-# - PU Location (object): Location in which the taximeter was engaged.
-# - DO Location (object): in which the taximeter was disengaged. Location shown as borough, zone.
-# 
-# - RateCode(int64): final rate in effect at the end of the trip.
-# 
-# ##### 3)Payment data:
-# 
-# - Payment type(Categorical): How the passenger paid for the trip.
-# 
-# - Fare amount(float64): The time-and-distance fare calculated by the meter.
-# 
-# - Extra (float64): Miscellaneous extras and surcharges. Currently, this only includes the $0.50 and $1 rush hour and overnight charges.
-# 
-# - MTA tax (float64): $0.50 MTA tax that is automatically triggered based on the metered rate in use.
-# - Improvement surcharge(float64): $0.30 improvement surcharge assessed on hailed trips at the flag drop. The improvement surcharge began being levied in 2015.
-# 
-# - ehail fee (float64): An e-hail fee, also known as an electronic hail fee, is a charge that is added to the cost of a ride when using a ride-sharing or transportation network company (TNC) service like Uber or Lyft. This fee is typically a small additional cost that passengers pay when they request a ride through the TNC's mobile app or website.
-# 
-# - Tip amount(float64): is automatically populated for credit card tips. Cash tips are not included.
-# 
-# - Tolls amount(float64): Total amount of all tolls paid in the trip.
-# 
-# - Total amount(float64): charged to passengers. Does not include cash tips.
-# 
-# - Trip type(Categorical): Whether the trip was a street-hail or a dispatch that is automatically assigned based on the metered rate in use but can be altered by the driver. Street hail means the passenger stopped the cab on the street. Dispatch means the cab was ordered through phone/application.
-# 
-
-# In[48]:
 
 
 EXPECTED_DATA_TYPES = {
@@ -1667,204 +990,6 @@ EXPECTED_DATA_TYPES = {
 ORIGINAL_COLUMNS_NAMES = list(df.columns)
 
 
-# In[49]:
-
-
-df.sample(1)
-
-
-# - we cross checked the data schema with actual data for missing/changed attributes :
-#   - only rate code was changed to rate_type as a column name 
-
-# In[50]:
-
-
-CURRENT_STEP = STEPS['BEFORE']
-status(df, 'Initial Status')
-
-
-# ### 1.6- Dataset Row Shape and Index <a id="shape"></a>
-# 
-# - each row represents a trip
-# - we have 1,252,586 rows and 20 columns
-# - in each row there exists an entry that have atleast one attribute with missing observations
-# - No Suitable index:
-#   - there is no attribute can be used as a unique identifier for each row
-#   - there is no attribute can resemble each trip
-#   - so we will go for the default index
-#   <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[51]:
-
-
-df.info()
-
-
-# In[52]:
-
-
-plot_numeric_attributes(df, 'Numeric Attributes Before')
-
-
-# In[53]:
-
-
-# Unique Values on numeric attributes because we don't have it
-
-def numric_unique_vals(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Calculate the number of unique values in each numeric column.
-    """
-    display(pd.DataFrame(df.select_dtypes(include='number').nunique(),
-            columns=['Num of Unique Values']))
-
-
-numric_unique_vals(df)
-
-
-# ### 1.7 Q1. Understanding Numeric Attributes and Investigating - Basic EDA <a id="numeric-attributes"></a>
-# 
-# - Passenger Count:
-#   - The passenger count ranges from 1 to 333, with an average of approximately 1.36 passengers,which sounds weird for taxi holding more than 10 let's assume worst case say :
-#     - the behind seat can take up to 4
-#     - say each passenger have a kid on his lap
-#     - maximum of 5\*2 = 10 passenger count and obviously we won't count the driver as a passenger this scenario if in egypt.
-#     - According to [Taxi in NYC](https://www.takewalks.com/blog/nyc-taxis#:~:text=The%20maximum%20amount%20of%20passengers,taxicab%20by%20law%20is%20four.) , taxi cap allows only 4 passengers
-#     - we have 10 unique values for the passenger count including wrong values
-#   - Most trips have one passenger (25th, 50th, and 75th percentiles all equal to 1).
-#   - There are a few trips with exceptionally high passenger counts (up to 333). These might be outliers or data entry errors.
-# - Trip Distance:
-#   - Trip distances vary from 0 to 698.56 miles, with an average of approximately 2.77 miles.
-#   - The distribution of trip distances is positively skewed, with the 75th percentile at 3.46 miles.
-#   - This suggests that most trips are relatively short.
-# - Pickup time and dropoff time
-#   - can be the same (we need to investigate it too)
-# - Fare Amount:
-#   - The fare amount ranges from -315.00 to 5005.50, **including negative values.**
-#     - Negative fare amounts and exceptionally high values may need further investigation.
-#   - The average fare amount is approximately $12.11.
-#   - There are significant variations in fare amounts, with a standard deviation of $10.65.
-# - Total amount :
-#   - have **negative values** that we need to investigate
-# - Extra, MTA Tax, Tip Amount, Tolls Amount, Improvement Surcharge, and Total Amount:
-# 
-#   - These columns have similar statistics in terms of mean, standard deviation, min, and max.
-#   - The distributions of these columns should be examined to understand their impact on the total amount.
-#   - Some columns, like tip amount, have a high standard deviation, indicating variability in tips given.
-# 
-#   - Ehail Fee and Congestion Surcharge:
-#     - contains only NaN value
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[54]:
-
-
-def obj_attr(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    describe the object attributes
-    """
-    object_cols_df = df.select_dtypes(include='object')
-    display(object_cols_df.describe())
-    return object_cols_df
-
-
-object_cols_df = obj_attr(df)
-
-
-# In[55]:
-
-
-def object_value_counts(df: pd.DataFrame):
-    """
-    show the value counts of objects that have  unique values <=10
-    """
-    for col_name in df.columns:
-        if (df[col_name].dtype == 'object' and df[col_name].nunique() <= 10):
-            display(df[col_name].value_counts())
-            print('='*60)
-
-        elif (df[col_name].dtype == 'object' and df[col_name].nunique() > 10):
-            print(f'{col_name} have over 10 unique values')
-            print('='*60)
-
-
-object_value_counts(object_cols_df)
-
-
-# ### 1.8 Q2. Understanding Object attributes nature and investigating - Basic EDA <a id="object-attributes"></a>
-# 
-# Based on the provided data and the information you've given about the columns, it appears that you are working with a dataset related to taxi or ride-hailing services. The dataset includes information about vendors, pickup and drop-off times, store and forward flags, rate types, locations, payment types, and trip types. Here's a brief exploratory data analysis (EDA) of the data:
-# 
-# 1. **Vendor Distribution:**
-# 
-#    - VeriFone Inc. has significantly more records (994,502) compared to Creative Mobile Technologies, LLC (258,084).
-#    - The "vendor" column seems to represent different taxi service providers.
-# 
-# 2. **Unique Values in Date-Time Columns:**
-# 
-#    - The columns "lpep_pickup_datetime" and "lpep_dropoff_datetime" each have over 10 unique values, indicating a variety of date and time values.
-# 
-# 3. **Store and Forward Flag:**
-# 
-#    - Most records (1,249,446) have a "N" value for the "store_and_fwd_flag" column, while only 3,140 have a "Y" value.
-#    - This column seems to indicate whether data was stored and forwarded in cases of connectivity issues.
-# 
-# 4. **Rate Type:**
-# 
-#    - The "rate_type" column has several categories, including :
-#    - "Standard rate"(Common): refers to the regular, standard pricing
-#    - "Negotiated fare":indicates that the fare or price for the service has been negotiated or agreed upon between the passenger and the service provider
-#    - "JFK":from John F. Kennedy International Airport (JFK Airport)
-#    - "Newark": trips to or from Newark Liberty International
-#    - "Nassau or Westchester": to or from Nassau County, New York, or Westchester County
-#    - "Group ride": to or from Nassau County, New York, or Westchester County
-#    - "Unknown"
-# 
-# 5. **Location Information:**
-# 
-#    - Both "pu_location" and "do_location" columns have over 10 unique values.
-#    - This suggests that there are many different pickup and drop-off locations in the dataset.
-# 
-# 6. **Payment Types:**
-# 
-#    - The "payment_type" column includes categories like
-#    - "Credit card"
-#    - "Cash"
-#    - "No charge": due to a promotion, a complementary service, or any other reason
-#    - "Dispute" : indicate that there is a disagreement or issue related to the payment for the service
-#    - "Unknown."
-#    - "Credit card" and "Cash" are the most common payment types.
-# 
-# 7. **Trip Type:**
-#    - The "trip_type" column has three categories:
-#    - "Street-hail "(most common): refers to the traditional method of hailing a taxi directly from the street or curbside
-#    - "Dispatch": Passengers may call a taxi dispatch service or use a mobile app to request a taxi, and the dispatch system assigns a nearby taxi to pick them up.
-#    - "Unknown"
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# #### 1.9 In the data description Quick fix (Dropping Ehail Fee and Congestion Surcharge if it doesn't consist of 2019 records otherwise imputing <a href="MNAR">(MNAR)</a>) <a id="ehail-fee"></a>
-# 
-# - ehail fee was introduced in January 1st 2019 so we will drop it since it is all NaN but if we are going to use the data of 2019 we will keep it
-# - we have 2 vendors that provided the records
-# 
-#   - VeriFone Inc.:
-#     - in 2016 it supported only taximeter
-#     - didn't had an application service in 2016 , the application was developed in 2018 [Verifone Taxi Media App](https://play.google.com/store/apps/details?id=verifone.com.vfco&hl=en&gl=US)
-#   - Creative Mobile Technologies, LLC:
-#   - unable to find an app service for passengers
-# 
-# - which means none of the vendors transportation network company (TNC) service was supported in green taxi in 2016.
-# - so we can drop it since both of these vendors or even no transportation network company (TNC) service column was provided in the data set so I think we could safely drop it
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[56]:
 
 
 def process_new_introduced_numeric_column(df: pd.DataFrame, new_column_name: str, date_column_name: str):
@@ -1905,179 +1030,42 @@ process_new_introduced_numeric_column(
     df, 'congestion_surcharge', 'lpep_pickup_datetime')
 
 
-# ##### 1.10 We will Drop Duplicated Entries Intially (we might do it again at the end too) <a id="drop-duplicates"></a>
-# 
-# - we will drop duplicated rows becasue it is not useful for our analysis because :
-#   - it is not useful for our analysis because it is with too low possiblity to have the same trip with the same attributes and same dropoff and pickup time , route distance and fare amount and many other attributes
-#   <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
 
-# In[58]:
 
 
 dups_rows = df[df.duplicated(keep=False)][['lpep_pickup_datetime', 'lpep_dropoff_datetime', 'do_location', 'pu_location',
                                            'total_amount', 'vendor', 'store_and_fwd_flag']].sort_values(by=['lpep_pickup_datetime', 'lpep_dropoff_datetime'])
-print(f'There are {len(dups_rows)} duplicated rows')
-display(dups_rows)
 
 
-# - this indicates that there was a problem in the data collection process
-#   - specifically a glitch in the taximeter that caused it to record duplicate values for the same trip which occurred more with VeriFone Inc. vendor.
-#   - maybe the taximeter was not responding and the driver was trying to fix it by resubmitting the same trip again and again in the system
-# 
-
-# In[59]:
 
 
 # Drop rows where all attributes are duplicated
 df = df.drop_duplicates(keep=False)
 
 
-# ##### 1.11 We will Drop Empty Entries Intially (we might do it again at the end too) <a id="drop-empty"></a>
-# 
-# - because it is not useful for our analysis
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
 
-# In[60]:
 
 
 # dropping the rows that have all of the values missing because they are useless for us
 df.dropna(how='all', inplace=True)
 
 
-# In[61]:
 
-
-df = save_checkpoint(df, [])
-
-
-# ## 2. vendors and store_fwd_flag investigation and encoding - **Checkpoint 2** <a id="vendor"></a>
-# 
-# - VeriFone Inc.developed before 2012 [Verifone Media Taxi Demo](https://www.youtube.com/watch?v=8_N2tto88oc&ab_channel=Verifone):
-#   - have a taximeter
-#   - when passenger gets in the vehicle the driver activates taximter :
-#   - specifies the number of passengers **(Rate varies according to that number)**
-#   - each city have different rate rules and taximeter adapts to it
-#   - supports GPS
-#   - accepts credit card payments
-# - [Creative Mobile Technologies, LLC](https://www.cmtgroup.com/#:~:text=with%20a%20mission%20to%20provide,integrated%20technology%20in%20the%20world.):
-# 
-#   - didn't provide correlation insights from their website
-# 
-# - we can deduce the correlation between the vendor and store_fwd_flag and other attributes from the table without encoding it first so let's encode all values to get a better understanding of the data and the correlation between the vendor and other attributes
-# 
-# _Remark: I have pulled this cell up to show that it didnt had any relationship with other numerical attributs as early as possible_
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[62]:
-
-
-df = load_checkpoint(1)
-
-
-# ##### 2.1 Q3. How vendors operate with taxi caps - Basic EDA <a id="vendor-operate"></a>
-# 
-# - VeriFone Inc.developed before 2012 [Verifone Media Taxi Demo](https://www.youtube.com/watch?v=8_N2tto88oc&ab_channel=Verifone):
-#   - have a taximeter
-#   - when passenger gets in the vehicle the driver activates taximter :
-#   - specifies the number of passengers **(Rate varies according to that number)**
-#   - each city have different rate rules and taximeter adapts to it
-#   - supports GPS
-#   - accepts credit card payments
-# - [Creative Mobile Technologies, LLC](https://www.cmtgroup.com/#:~:text=with%20a%20mission%20to%20provide,integrated%20technology%20in%20the%20world.):
-# 
-#   - didn't provide correlation insights from their website
-# 
-# - we can deduce the correlation between the vendor and store_fwd_flag and other attributes from the table without encoding it first so let's encode all values to get a better understanding of the data and the correlation between the vendor and other attributes
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[63]:
 
 
 identify_columns_needing_imputation(df, ['vendor'])
 
 
-# - vendor don't have empty values the reason why we dont have any empty values is because the name of the respective vendor is hardcoded to the entry so we can't have any empty values
-# 
 
-# In[64]:
-
-
-plot_value_counts(df, 'vendor')
-
-
-# - VeriFone Inc. have more trips than Creative Mobile Technologies, LLC
-# 
-
-# In[65]:
-
-
-plot_columns_relationship(df, 'vendor', [('trip_type', 'count'), (
-    'store_and_fwd_flag', 'count'), ('rate_type', 'count'), ('payment_type', 'count')])
-
-
-# - VeriFone Inc. have no internet connection issues (store_fwd_flag = N) while Creative Mobile Technologies, LLC have internet is the only vendor that has connection issues (store_fwd_flag = Y) and not
-# - most VeriFone Inc. trips come from Street-hail
-# 
-
-# ##### 2.2 Encoding Vendor <a id='encode-vendor'> </a>
-# 
-# - the most appropriate encoding method will be one hot encoding :
-#   - because the vendor is a categorical attribute
-#   - the vendor is not ordinal
-#   - it wont cause large memory space because it will result with 2 columns
-#   - not binarized because it is not a binary attribute and it might be more than 2 vendors in the future
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[66]:
 
 
 df = one_hot_encode_column(df, 'vendor')
 
 
-# ##### 2.3 Q4. How Store and Forward Flag operate with taxi caps - Basic EDA <a id="store-operate"></a>
-# 
-# - Store and Forward Flag:
-#   - Most records (1,249,446) have a "N" value for the "store_and_fwd_flag" column, while only 3,140 have a "Y" value.
-#   - This column seems to indicate whether data was stored and forwarded in cases of connectivity issues.
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[67]:
 
 
 identify_columns_needing_imputation(df, ['store_and_fwd_flag'])
 
-
-# In[68]:
-
-
-plot_value_counts(df, 'store_and_fwd_flag')
-
-
-# - it will be useless to make plots and find relationships between store_fwd_flag and other attributes because the yes values are too low and the no values are too high so insights drawn will be biased to the No values always
-# 
-
-# ##### 2.4 Encoding Store and Forward Flag <a id="encode-store"></a>
-# 
-# - we will use binarize encoding for this attribute because :
-#   - it is a categorical attribute
-#   - it is not ordinal
-#   - it is a binary attribute (Y/N) so it will result with one column
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[69]:
 
 
 df = binarize_column(df, 'store_and_fwd_flag',{
@@ -2086,79 +1074,7 @@ df = binarize_column(df, 'store_and_fwd_flag',{
 })
 
 
-# In[70]:
 
-
-df = save_checkpoint(df, ['vendor', 'store_and_fwd_flag'])
-
-
-# ## 3. Understanding Datetime attributes and Investigating - **Checkpoint 3** <a id="datetime-attributes"></a>
-# 
-# - lpep pickup datetime (datetime64): when meter was engaged
-# - lpep dropoff datetime (datetime64): when meter was disengaged.
-# - as we can see from the above table the pickup and dropoff datetime are not in the correct type so we can't use them as datetime objects and infer from them so we need to correct it first.
-# - they are in 24 hour time format
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[71]:
-
-
-df = load_checkpoint(2)
-
-
-# In[72]:
-
-
-plot_data(df, ['trip_distance', 'fare_amount', 'tip_amount'])
-
-
-# ##### 3.1 Pickup and Dropoff Datetime format,type and consistency <a id="pickup-dropoff-datetime-format-consistency"></a>
-# 
-# - we will check the datetime format and consistency of the pickup and dropoff datetime and whether the vendors have same timestamp format
-# - we will convert the pickup and dropoff datetime to datetime objects
-# - we will check if the pickup datetime is before the dropoff if not we will swap them
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[73]:
-
-
-def detect_datetime_format(date_series: pd.Series):
-    """
-    Detect the format of a datetime series.
-    """
-    consistent_format = None  # Initialize the detected format to None
-
-    # List of potential datetime formats
-    potential_formats = ["%Y-%m-%d %H:%M:%S",
-                         "%m/%d/%y %I:%M %p", "%b %d, %Y %H:%M:%S"]
-
-    for date_string in date_series:
-        for format_code in potential_formats:
-            try:
-                datetime.datetime.strptime(str(date_string), format_code)
-                if consistent_format is None:
-                    consistent_format = format_code
-                elif consistent_format != format_code:
-                    consistent_format = None
-                    continue  # Inconsistent format
-            except ValueError:
-                pass
-    if consistent_format is not None:
-        return consistent_format  # Return the detected consistent format
-    else:
-        return "Format is not consistent"  # No valid format detected
-
-
-# Too Expensive computationally
-print(detect_datetime_format(df['lpep_dropoff_datetime']))
-print(detect_datetime_format(df['lpep_pickup_datetime']))
-
-
-# In[74]:
 
 
 def convert_to_datetime_col(df: pd.DataFrame):
@@ -2188,13 +1104,8 @@ def convert_to_datetime_col(df: pd.DataFrame):
 
 
 convert_to_datetime_col(df)
-# let us make sure it is fixed
-print(df['lpep_pickup_datetime'].dtype)
-print(df['lpep_dropoff_datetime'].dtype)
-display(df.select_dtypes(include='datetime').describe())
 
 
-# In[75]:
 
 
 def fix_invalid_timestamps(df: pd.DataFrame):
@@ -2239,9 +1150,6 @@ TIME_COLS = ['total_trip_time_sec',
 identify_columns_needing_imputation(df, DATETIME_COLS)
 
 
-# - it seems appropriate to sort the values by pickup and dropoff datetime because it seems appropriate and we can in the future see the trips in a time series manner
-
-# In[77]:
 
 
 def sort_values(df:pd.DataFrame,cols: List[str]):
@@ -2256,29 +1164,7 @@ def sort_values(df:pd.DataFrame,cols: List[str]):
 sort_values(df, DATETIME_COLS)
 
 
-# ##### 3.2 feature engineered from datetime attributes <a id="feature-engineered-from-datetime-attributes"></a>
-# 
-# - total_trip_deltatime :
-#   - delta time = lpep_dropoff_datetime - lpep_pickup_datetime
-#   - we will use it to draw insights from a readable format in datetime and correlations
-# - total_trip_time_sec :
-# - converted to seconds as float type to be able to check for correlations with float attributes
-# - delta time = lpep_dropoff_datetime - lpep_pickup_datetime
-# - total_trip_time_hr :
-# - delta time = lpep_dropoff_datetime - lpep_pickup_datetime
-# - converted to hours as float type for easier interpretation
-# - week_number_monthly:
-#   - it indicates in which week in the month the trip was
-# - week_number_yearly :
-# 
-#   - it indicates in which week in the year the trip was
-# 
-# - date_range (string):
-#   - it indicates the week start and end range date
-#   - we won't encode it because we could conside its encode form is week_number_monthly (label-encoded)
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
+
 
 # In[78]:
 
@@ -2314,66 +1200,10 @@ def calculate_total_time(df: pd.DataFrame, start_date_column: str, end_date_colu
     feature_engineer('date_range', 'the date range of the week',
                      df['date_range'].dtype.name)
 
-    print(f'total_trip_deltatime type: {df["total_trip_deltatime"].dtypes}')
-    print(f'total_trip_time_sec type: {df["total_trip_time_sec"].dtypes}')
-
-    # Display feature engineered columns
-    display(df[TIME_COLS+['week_number_yearly',
-            'week_number_monthly', 'date_range']].head(1))
-
-    # Create subplots for histograms
-    fig, axes = plt.subplots(1, 2, figsize=(24, 6))
-
-    # Plot histogram of the total time in seconds
-    axes[0].hist(df['total_trip_time_sec'], bins=100, edgecolor='black')
-    axes[0].set_xlabel('Total Time (seconds)')
-    axes[0].set_ylabel('Frequency')
-    axes[0].set_title('Histogram of Total Time (seconds)')
-
-    # Plot histogram of the total time in hours
-    axes[1].hist(df['total_trip_time_hr'], bins=100, edgecolor='black')
-    axes[1].set_xlabel('Total Time (hours)')
-    axes[1].set_ylabel('Frequency')
-    axes[1].set_title('Histogram of Total Time (hours)')
-
-    # Save the figure
-    save_figure('total_time_histograms.png')
-    plt.tight_layout()
-    plt.show()
 
 
 # Call the function to calculate total time
 calculate_total_time(df, 'lpep_pickup_datetime', 'lpep_dropoff_datetime')
-
-
-# - It appears that the earliest pickup datetime is 2016-10-01 and the latest dropoff datetime is 2016-11-01 which matches our data description that says that the data is from 2016-10-01 to 2016-11-01
-# 
-
-# In[79]:
-
-
-df = save_checkpoint(df, DATETIME_COLS)
-
-
-# ## 4. Location(MCAR) and Extract GPS Coordinates Integration - **Checkpoint 4**<a id="extract_gps_loc"></a>
-# 
-# - the location might be unknown because the driver didn't turn on the GPS or the GPS was not working or the driver didn't want to share his location so the system record as unknown
-# - the location might be unknown because the location wasn't identified by the system
-# - the location might be unknown because the location was outside the city
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
-
-# In[80]:
-
-
-df = load_checkpoint(3)
-
-
-# - we imputed with unknown and unified to unknown by regex incase of missing values because it is MCAR
-# 
-
-# In[81]:
 
 
 LOCATION_COLUMNS = ['pu_location', 'do_location']
@@ -2431,24 +1261,6 @@ def process_location_columns(df: pd.DataFrame, location_columns: List[str]):
 process_location_columns(df, LOCATION_COLUMNS)
 
 
-# ### 4.1 Why pickup and dropoff locations are <a href="#MCAR">MCAR</a> ? <a id="pu_do_MCAR"></a>
-# 
-# - MCAR : the data is missing completely at random
-# - we consolidated unknown resemblers with unknown through Regex pattern matching
-# - as we can see from the above table either the pickup or dropoff or both locations are unknown the reason behind it :
-#   - store and forward flag is N which means that the trip was not stored in the vehicle memory before sending to the vendor so the location should be known but it is not , so this is a problem in the data collection process and we can't do anything about it
-#   - the GPS device might be broken
-#   - the GPS location is not available for the location name so we can't do anything about it
-#   - the data might be corrupted
-# 
-# ### 4.2 How to handle locations MCAR ? <a id="handle_pu_do_MCAR"></a>
-# 
-# - we can't do anything about it because it is MCAR so we will leave it as it is unkown
-# - it is not a good idea to impute it with the most frequent value because it will be biased to the most frequent value and it will be a wrong representation of the data and it will affect the analysis and the model
-# - they are around 1000 records with unknown locations so it is not a big deal to drop them because they are not a big portion of the data
-# 
-# <p align="right"><a href="#table-of-content">Go To Top</a></p>
-# 
 
 # ### 4.3 Extract and Save GPS Coordinates Integration <a id="extract_gps"></a>
 # 
