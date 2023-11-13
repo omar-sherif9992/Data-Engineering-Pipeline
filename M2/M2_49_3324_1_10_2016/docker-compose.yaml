@@ -1,6 +1,8 @@
 version: "3.9"
 
 
+volumes: 
+  green_taxi_10_2016_postgres:
 
 services:
   pgdatabase:
@@ -11,15 +13,19 @@ services:
       - POSTGRES_PASSWORD=root
       - POSTGRES_DB=green_taxi
     volumes:
-      - "./data:/var/lib/postgresql/data:rw"  # Corrected volume path
+      - "green_taxi_10_2016_postgres:/var/lib/postgresql/data:rw"  
+      - "./m2_queries:/var/lib/:rw"
     ports:
       - "5432:5432"
     restart: on-failure
 
-  ingest_database:
-    container_name: ingest_container
+  preprocessing_ingestion:
+    container_name: preprocessing_ingestion_container
     build: .
-    image: ingest_database:dew23
+    image: preprocessing_ingestion:1.0
+    volumes:
+      - $(pwd)/data:/app/data
+      - $(pwd)/src:/app/src
 
     depends_on:
       - pgdatabase
@@ -28,14 +34,14 @@ services:
   pgadmin:
     container_name: pgadmin4_container
     image: dpage/pgadmin4
-    restart: always
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: root
+      PGADMIN_DEFAULT_PASSWORD: admin
     depends_on:
       - pgdatabase
       - ingest_database
     ports:
       - "80:80"
+    restart: on-failure
 
 
