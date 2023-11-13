@@ -2269,11 +2269,16 @@ def drop_categorical_columns(df):
 
     # Filter the rows where 'encoded' column is not empty
     non_empty_encoded = concatenated_df[concatenated_df['encoded'].notna()]
+    
+    
 
     # Get the unique column names with non-empty 'encoded' values
     column_names_with_encoded = non_empty_encoded['column name'].unique()
     
     column_names = [col for col in column_names_with_encoded if col in df.columns] + LOCATION_COLUMNS
+    
+    print('dropping categorical')
+    print(column_names)
 
     # Drop the columns with non-empty 'encoded' values
     df = df.drop(columns=column_names)
