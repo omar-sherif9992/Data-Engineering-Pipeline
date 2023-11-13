@@ -1,212 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# # Milestone 1
-# 
-# ## Objectives
-# 
-# - Exploratory data analysis with visualization
-# - extract additional data,
-# - perform feature engineering
-# - pre-process the data for downstream cases such as ML and data analysis.
-# 
-# ## Dataset
-# 
-# - NYC green taxis dataset : It contains records
-#   about trips conducted in NYC through green taxis. The dataset is available at [NYC green taxi](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
-# - There are multiple datasets for this case study(a dataset for each month) so I am assigned to 10/2016 dataset.
-# 
-# ## Guidelines
-# 
-# - Load the dataset
-# 
-# ### EDA
-# 
-# - Explore the dataset and ask at least 5 questions to give you a better
-#   understanding of the data provided to you.
-# - Visualize the answer to these 5 questions.
-# 
-# ### Cleaning the data
-# 
-# - Tidy up the column names, make sure there is no spaces
-# - Observe,comment on and handle inconsistent data.(i.e duplicates, irrelevant data,incorrect data,etc)
-# - Observe missing data and comment on why you believe it is missing(MCAR,MAR or MNAR).
-# - Handle missing data
-# - Observe and comment on outliers
-# - Handle outliers
-# 
-# IMPORTANT NOTE : With every change you are making to the data you need to comment on why you used this technique and how has it affected the data(by both showing the change in the data i.e change in number of rows/columns,change in distribution, etc. and commenting on it).
-# 
-# ### Feature Engineering
-# 
-# - Add 2 new columns named 'Week number' and 'Date range' and discretize
-#   the data into weeks according to the dates.
-#   - Tip: Change the datatype of the date feature to datetime type instead
-#     of object.
-# - Encode any categorical feature(s) and comment on why you used this
-#   technique and how the data has changed.
-# - If exists , Identify feature(s) which need normalization and show your
-#   reasoning. Then choose a technique to normalize the feature(s) and
-#   comment on why you chose this technique.
-# - Add at least two more columns which adds more info to the dataset by
-#   evaluating specific feature(s). I.E( Column indicating whether the trip was on
-#   a weekend or not).
-# 
-# ### Additional data extraction
-# 
-# - Add GPS coordinates for the cities/locations.
-# - For this task you can extract the GPS coordinates from an API or web
-#   scraping and integrate into your csv file as new features.
-# - Tip 1 - you can find the web scraping and data integration notebooks under 'additional resources' on the CMS useful.
-# - Tip 2 - If you are going to use an API make sure you do not make request for each existing row but rather group by the cities and get their respective coordinates. Making a request for each row is too inefficient and expensive.
-# - Tip 3 - Rather than running the code for calling the API each time you load the notebook, the first time you call the API save the results in a csv file and then you could you check if a csv file exists for the GPS coordinates, if so, load directly and don't call APi. Same applies for web scraping.
-# 
-# ### Lookup table and load back into new csv file
-# 
-# - Create a lookup table
-# 
-%%html
-<style>
-/* Scroll to anchor smoothly */
-a[href^="#"] {
-    transition: scroll-behavior 0.5s;
-}
-</style>
-# # Table Of Content <a id='table-of-content'></a>
-# 
-# - <a href="#constants">Constants</a>
-# 
-#   - <a href="#lookup">Lookup Tables</a>
-# 
-# - <a href="#helper-methods">Helper Methods</a>
-# 
-#   - <a href="#format">Formatting and OS utils Methods</a>
-#   - <a href='#plot'> Different Plotting Functions with outlier detection </a>
-#   - <a href="#checks"> Check and Drop based on criteria Methods</a>
-#   - <a href="#imputation"> Imputation and Outlier Handling Methods</a>
-#   - <a href="#discretization"> Discretization and Binning Methods</a>
-#   - <a href="#encode">Encode Methods</a>
-#   - <a href="#decode">Decode Methods</a>
-# 
-# - <a href="#extraction">Extraction , Formatting and Basic EDA - **Checkpoint 1**</a>
-# 
-#   - <a href="#load">loading the dataset</a>
-#   - <a href="#format_column_names">Format Column Names</a>
-#   - <a href="#sort_column_names"> Sort Column Names Monotonically</a>
-#   - <a href='#missing_columns'> identifying the columns with missing values _(to takecare of them later)_</a>
-#   - <a href="#eda">Exploratory Data Analysis through Description and Initial Understanding - **EDA**</a>
-#   - <a href="#shape">Dataset Row Shape and Index </a>
-#   - <a href="#numeric-attributes">Q1. Understanding Numeric Attributes and Investigating - **Basic EDA**</a>
-#   - <a href="#object-attributes">Q2. Understanding Object Attributes and Investigating - **Basic EDA**</a>
-#   - <a href="#ehail-fee"> In the data description Quick fix Dropping Ehail Fee and Congestion Surcharge if it doesn't consist of 2019 records otherwise imputing (MNAR)</a>
-#   - <a href="#drop-duplicates"> We will Drop Duplicated Entries Intially (we might do it again at the end too) </a>
-#   - <a href="#drop-empty">We will Drop Empty Entries Intially (we might do it again at the end too) </a>
-# 
-# - <a href="#vendor"> vendors and store_fwd_flag investigation and encoding - **Checkpoint 2** </a>
-# 
-#   - <a href="#vendor-operate"> Q3. How vendors operate with taxi caps - **Basic EDA** </a>
-#   - <a href='#encode-vendor'> Encoding Vendor </a>
-#   - <a href="#store-operate"> Q4. How Store and Forward Flag operate with taxi caps - **Basic EDA**</a>
-#   - <a href="#encode-store">Encoding Store and Forward Flag </a>
-# 
-# - <a href="#datetime-attributes">Understanding Datetime attributes and Investigating - **Checkpoint 3**</a>
-# 
-#   - <a href="#pickup-dropoff-datetime-format-consistency"> Pickup and Dropoff Datetime format and consistency - cleaning</a>
-#   - <a href="#feature-engineered-from-datetime-attributes">feature engineered from datetime attributes 4 new attributes </a>
-# 
-# - <a href="#extract_gps_loc"> Location(MCAR) and Extract GPS Coordinates Integration - **Checkpoint 4** </a>
-# 
-#   - <a href="#pu_do_MCAR"> Why pickup and dropoff locations are MCAR ? </a>
-#   - <a href="#handle_pu_do_MCAR"> How to handle locations MCAR ? </a>
-#   - <a href="#extract_gps"> Extract GPS Coordinates Integration </a>
-#   - <a href="#extract_haversine_distance"> Extract Haversine Distance from GPS Coordinates - Feature Engineering</a>
-#   - <a href="#trips-neighborhoods-same-diff">Q5. Are the Trips are mostly within neighborhoods or between neighborhoods? - **Complex EDA** </a>
-#   - <a href="#pickup-dropoff-location-top10">Q6. What is the Top 10 pickup and dropoff location within same or different neighborhoods? - **Complex EDA** </a>
-#   - <a href="#queens-austria"> Why Queens austria is the most same pickup and dropoff location? </a>
-#   - <a href="#manhatten">Why Manhattan East Harlem North is the most different pickup and dropoff location? </a>
-# 
-# - <a href="#trip-distance-time-speed">Investigating trip distance,time and speed attribute values and distribution (Multivariate Analysis) - Complex EDA - **Checkpoint 5**</a>
-#   - <a href="#feature-engineered-from-datetime-attributes">Feature Engineered mph</a>
-#   - <a href="#trip-distance-outliers"> Detecting and Handling Outliers for Trip Distance, Total Trip Time and Mph </a>
-#   - <a href="#floor-ceiling-trip-distance-outliers"> Floor and Ceiling Trip distance Outliers </a>
-#   - <a href="#same-pu-do-datetime">Q6. why we have trips that have same pickup and dropoff location and date time ? </a>
-#   - <a href="#discretize-trip-distance"> Discretize the Trip Distance Attribute </a>
-#   - <a href="#encode-trip-distance-bins"> Encode trip_distance_bins </a>
-#   - <a href="#most-frequent-trip-distance">Q7. What is the most frequent trip distance range? </a>
-#   - <a href="#discretize-rush-hours"> Discretize the records whether they are in rush hours or not </a>
-#   - <a href="#trips-period"> Q8. what is the most hour,day,weekend, and weekday that have the most average ,median trip distance and number of trips?  - **Complex EDA** </a>
-#   - <a href="#encode-do-pu-location"> Encode the do_location and pu_location </a>
-# 
-# - <a href="#passenger-count"> Passenger Count Relationship with other columns and Investigating (MCAR) - **Checkpoint 6**</a>
-#   - <a href="#passenger-count-MCAR"> Why passenger_count Missing Completely at Random <a href="#MCAR">MCAR</a> : </a>
-# 
-# - <a href="#rate_type"> Rate Type Analysis- **Checkpoint 7**</a>
-#   - <a href="#rate-type-MCAR">Why rate_type <a href="#MCAR">MCAR</a> ? </a>
-#   - <a href="#rate-type-encode"> Rate type Encoding </a>
-#   - <a href="#rate-type-discretize"> Discretize rate types into 3 trip categories</a>
-#   - <a href="#trip-category-encoding">Trip Category Encoding </a>
-# 
-# - <a href="#trip-type"> Trip Type - **Checkpoint 8** </a>
-#   -  <a href="#trip-type-MCAR"> Why trip_type <a href="MCAR">(MCAR)</a> ? </a>
-#   -  <a href="#trip-type-encode"> Trip type Encoding </a>
-# 
-# - <a href="#total-amount">Total Amount Relationship with other numerical columns and Investigating - **Checkpoint 9**</a>
-#   - <a href="#total-amount-outliers"> Detecting and Handling Outliers for Total Amount </a>
-#   - <a href="#total-amount-discretize"> Discretize Total Amount </a>
-#   - <a href="#total-amount-period"> Q9. what is the most hour,day,weekend, and weekday that have the most average ,median of Total Amount Payed?</a>
-# - <a href="#passenger-count-payment-type"> Investigating Payment Type(MAR) Relationships, Imputations and Insights - **Checkpoint 10**</a>
-#   - <a href="#payment-type-MAR"> Why Payment type  <a href="#MAR">MAR</a> ? </a>
-#   - <a href="#payment-type-preference">Q10. What is is the preference of different payment type generally and within the day or week ? </a>
-# - <a href="#normalization-standardization"> Normalization and Standardization - **Checkpoint 11**</a>
-# - <a href="#class-imbalance"> Class Imbalance Problem </a>
-# - <a href="#featured-engineered-attributes"> Featured Engineered Attributes </a>
-# - <a href="#last-checks"> Last Checks  </a>
-# - <a href="#last-advices"> Last Advices  </a>
-# 
-# - <a href="#save-cleaned-data"> Saving the Lookup Table and Cleaned Data to a new csv file </a>
-# 
-# 
-# - <a href="#definitions"> Definitions</a>
-# 
-
-# ##### Connecting with google drive
-# 
-
-# In[1]:
-
-
-# A flag indicating whether the code is running on Google Colab.
-isONGOOGLE = False
-
-
-# In[2]:
-
-
-if isONGOOGLE:
-    from google.colab import drive
-    # Mount google drive to load training and testing data
-    drive.mount('/content/drive', force_remount=True)
-
-
-# #### Downloading Necessary Packages
-# 
-
-# In[3]:
-
-
-if isONGOOGLE:
-    get_ipython().system('pip install requests')
-    get_ipython().system('pip install seaborn')
-    get_ipython().system('pip install geopandas')
-    get_ipython().system('pip install geopy')
-    get_ipython().system('pip install jupyter_contrib_nbextensions')
-    get_ipython().system('pip install pyarrow')
-
-
-# #### importing packages
-# 
-
-# In[4]:
 
 
 # Standard Library
@@ -231,10 +22,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 
-# Data Visualization
-import matplotlib.pyplot as plt
-import seaborn as sns
-import matplotlib.image as mpimg
+
 
 # Machine Learning
 from sklearn.linear_model import LinearRegression
@@ -252,7 +40,6 @@ import re
 # Other
 import shutil
 from typing import List, Tuple, Dict, Any, Union
-from IPython.display import display
 
 
 # Set Random Seed
@@ -268,17 +55,7 @@ def set_seed(seed=42):
     np.random.seed(seed)
 
 
-# Set Matplotlib defaults
-plt.style.use('ggplot')
-plt.rc("figure", autolayout=True)
-plt.rc(
-    "axes",
-    labelweight="bold",
-    labelsize="large",
-    titleweight="bold",
-    titlesize=14,
-    titlepad=10,
-)
+
 # Set your Google Maps API key here
 api_key = "AIzaSyBXV_Q4_CWvV7btH9drTwc3BYRoj2GwozQ"
 
@@ -297,11 +74,7 @@ MYINFO = 'DEW23 Omar Sherif Ali 49-3324 MET'  # Information about a person.
 
 MILESTONE = 1  # The current milestone.
 
-if isONGOOGLE:
-    # Define the root directory path on Google Colab.
-    ROOT_DIR = f'/content/drive/My Drive/DataEngineering/{MYINFO}/Milestone {MILESTONE}'
-else:
-    ROOT_DIR = '.'  # Define the root directory path for other environments.
+ROOT_DIR = os.'.'  # Define the root directory path for other environments.
 
 # This where all the Packages are cached instead of reinstalling them every new runtime
 PACKAGES_DIR = f'{ROOT_DIR}/Packages'  # Directory for caching packages.

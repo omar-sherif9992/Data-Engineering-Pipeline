@@ -1,0 +1,41 @@
+version: "3.9"
+
+
+
+services:
+  pgdatabase:
+    container_name: postgres_container
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=green_taxi
+    volumes:
+      - "./data:/var/lib/postgresql/data:rw"  # Corrected volume path
+    ports:
+      - "5432:5432"
+    restart: on-failure
+
+  ingest_database:
+    container_name: ingest_container
+    build: .
+    image: ingest_database:dew23
+
+    depends_on:
+      - pgdatabase
+    restart: on-failure
+
+  pgadmin:
+    container_name: pgadmin4_container
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    depends_on:
+      - pgdatabase
+      - ingest_database
+    ports:
+      - "80:80"
+
+
