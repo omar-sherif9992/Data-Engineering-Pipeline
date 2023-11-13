@@ -5,8 +5,7 @@ sudo docker build -t preprocessing_image .
 
 ```
 
-- run the image
-```
+- run the image```
 sudo docker run -it --rm -v $(pwd)/data:/app/data -v $(pwd)/src:/app/src --name preprocessing_container  preprocessing_image
 ```
 
@@ -25,7 +24,7 @@ sudo docker volume inspect green_taxi_10_2016_postgres
 
 - run another postgres container
 ```
-sudo docker run -it --rm --name postgres_container -v green_taxi_10_2016_postgres:/var/lib/postgresql/data postgres:13
+sudo docker run -it --rm --name postgres_container -v green_taxi_10_2016_postgres:/var/lib/postgresql/data -e  POSTGRES_USER=root -e POSTGRES_PASSWORD=root  -e POSTGRES_DB=green_taxi -p 5432:5432 postgres:13
 ```
 
 - open another terminal and run the following command to get into the postgres container
@@ -35,7 +34,7 @@ sudo docker exec -it postgres_container bash
 
 - run the following command to get into the postgres database
 ```
-psql -U postgres
+ psql -d green_taxi
 ```
 
 - run the following command to check the tables in the database

@@ -2272,7 +2272,7 @@ def drop_categorical_columns(df):
     column_names_with_encoded = non_empty_encoded['column_name'].unique() 
     print(df.columns)
     
-    column_names = [col for col in column_names_with_encoded if col in df.columns] + LOCATION_COLUMNS + ['vendor','store_and_fwd_flag','pu_location','do_location','rate_type','trip_distance_bins','trip_category','trip_type','total_amount_bins' ,'trip_distance_haversine', 'rate_type', 'trip_category', 'trip_type','do_location','pu_location']
+    column_names = [col for col in column_names_with_encoded if col in df.columns] + LOCATION_COLUMNS + ['vendor','store_and_fwd_flag','pu_location','do_location','rate_type','trip_distance_bins','trip_category','trip_type','total_amount_bins' ,'trip_distance_haversine', 'rate_type', 'trip_category', 'trip_type','do_location','pu_location','encoded_total_amount_bins']
     column_names = list(set(column_names))
     column_names = [col for col in column_names if col in df.columns]
     
@@ -2281,10 +2281,13 @@ def drop_categorical_columns(df):
 
     # Drop the columns with non-empty 'encoded' values
     df = df.drop(columns=column_names)
+    
+    print("after effect")
     print(df.columns)
+    return df
 
 # we will remove the columns that we have encoded to reduce space
-drop_categorical_columns(df)
+df = drop_categorical_columns(df)
 
 
 

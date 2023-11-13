@@ -13,7 +13,7 @@ services:
       - POSTGRES_DB=green_taxi
     volumes:
       - green_taxi_10_2016_postgres:/var/lib/postgresql/data:rw
-      - ./m2_queries:/var/lib/:rw
+      - ./m2_queries:/var/lib/:rw"
     ports:
       - "5432:5432"
 
@@ -23,7 +23,7 @@ services:
     build: ./python_image
     image: preprocessing_ingestion
     volumes:
-      - "./python_image:/app/:rw"
+      - ./python_image:/app/:rw
     logging:
       driver: "json-file"
       options:
@@ -45,6 +45,3 @@ services:
     ports:
       - "8080:80"
     restart: on-failure
-
-
-
