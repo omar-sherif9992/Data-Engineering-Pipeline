@@ -109,17 +109,28 @@ LIMIT 1;
 
 SELECT 
     CASE
-        WHEN "trip_type_1" = 1 THEN 'Trip Type 1'
-        WHEN "trip_type_2" = 1 THEN 'Trip Type 2'
-        WHEN "trip_type_3" = 1 THEN 'Trip Type 3'
-        -- Add more WHEN clauses for other trip types if necessary
+        WHEN "encoded_trip_type_Dispatch"  THEN 'Dispatch'
+        WHEN "encoded_trip_type_Street-hail" THEN 'Street-hail'
         ELSE 'Unknown'
     END AS trip_type,
     AVG(trip_distance) AS average_distance
 FROM 
     green_taxi_10_2016
 GROUP BY 
-    "trip_type_1", "trip_type_2", "trip_type_3";
-order by average_distance DESC
+    "encoded_trip_type_Dispatch", "encoded_trip_type_Street-hail"
+ORDER BY average_distance DESC;
+
 
 /* 7. between 4pm and 6pm what is the average fare amount. */
+
+SELECT 
+    AVG(fare_amount) AS "average_fare_between_4pm_and_6pm"
+FROM 
+    green_taxi_10_2016
+WHERE 
+    EXTRACT(HOUR FROM TO_TIMESTAMP(lpep_pickup_datetime,'YYYY-MM-DD HH24:MI:SS')) BETWEEN 16 AND 18;
+
+
+
+
+

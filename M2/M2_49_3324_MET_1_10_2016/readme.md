@@ -19,12 +19,12 @@ sudo docker compose up --build --remove-orphans
 ## to check for the database in the terminal
     
 ```
-sudo docker volume inspect green_taxi_10_2016_postgres
+sudo docker volume ls
 ```
 
 - run another postgres container
 ```
-sudo docker run -it --rm --name postgres_container -v green_taxi_10_2016_postgres:/var/lib/postgresql/data -e  POSTGRES_USER=root -e POSTGRES_PASSWORD=root  -e POSTGRES_DB=green_taxi -p 5432:5432 postgres:13
+sudo docker run -it --rm --name postgres_container -v m2_49_3324_met_1_10_2016_green_taxi_10_2016_postgres:/var/lib/postgresql/data -e  POSTGRES_USER=root -e POSTGRES_PASSWORD=root  -e POSTGRES_DB=green_taxi -p 5432:5432 postgres:13
 ```
 
 - open another terminal and run the following command to get into the postgres container
