@@ -74,7 +74,7 @@ MYINFO = 'DEW23 Omar Sherif Ali 49-3324 MET'  # Information about a person.
 
 MILESTONE = 1  # The current milestone.
 
-ROOT_DIR = os.'.'  # Define the root directory path for other environments.
+ROOT_DIR = os.path.abspath('.')
 
 # This where all the Packages are cached instead of reinstalling them every new runtime
 PACKAGES_DIR = f'{ROOT_DIR}/Packages'  # Directory for caching packages.
@@ -126,7 +126,7 @@ CHECKPOINT_DIR = f'{ROOT_DIR}/Checkpoints'  # Directory for saving checkpoints.
 
 IMPUTE_TABLES_DIR = f'{ROOT_DIR}/impute'  # Directory for saving impute tables.
 ENCODE_TABLES_DIR = f'{ROOT_DIR}/encode'  # Directory for saving encode tables.
-LOOKUP_TABLES_DIR = f'{ROOT_DIR}/lookup'  # Directory for saving lookup tables.
+LOOKUP_TABLES_DIR = f'{ROOT_DIR}/data'  # Directory for saving lookup tables.
 
 
 FIXED_COLUMNS_NAMES = []
@@ -144,17 +144,6 @@ ORIGINAL_COLUMNS_NAMES = []
 LOOKUP_TABLE = {}    # An empty list used as a general lookup table.
 
 
-# ## Helper Functions <a id="helper-methods"></a>
-# 
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# #### Formatting and OS utils functions <a id='format'></a>
-# 
-# <p align="right"><a href='#table-of-content'>Go To Top</a></p>
-# 
-
-# In[7]:
 
 
 def load_dataframe(file_path: str, file_format='csv', **kwargs) -> pd.DataFrame:
@@ -308,26 +297,6 @@ def save_impute_table():
 # In[9]:
 
 
-def save_checkpoint(df: pd.DataFrame, fixed_column_names: List[str]) -> pd.DataFrame:
-    """
-    Saves a checkpoint of the given dataframe and returns a copy of it.
-    """
-    global CHECKPOINT_COUNTER, CHECKPOINT_DIR
-    CHECKPOINT_COUNTER += 1
-    for col in fixed_column_names:
-        if col not in FIXED_COLUMNS_NAMES:
-            FIXED_COLUMNS_NAMES.append(col)
-    print(f'Checkpoint {CHECKPOINT_COUNTER} saved.')
-    print(f'{len(FIXED_COLUMNS_NAMES)} fixed columns saved out of {len(ORIGINAL_COLUMNS_NAMES)} total original columns.')
-    print(f'{len(FEATURED_ENGINEER_COLS)} featured engineered columns saved.')
-    print(
-        f"Missing columns to investigate are : { [col for col in ORIGINAL_COLUMNS_NAMES if col not in FIXED_COLUMNS_NAMES]}")
-
-    save_dataframe(df, os.path.join(
-        f'{CHECKPOINT_DIR}', f'checkpoint_{CHECKPOINT_COUNTER}'), 'csv')
-    return df.copy()
-
-
 def fix_types(df: pd.DataFrame):
     """
     Fixes the data types of the given dataframe.
@@ -346,21 +315,6 @@ def fix_types(df: pd.DataFrame):
     return df
 
 
-def load_checkpoint(checkpoint_number: int, reset=True) -> pd.DataFrame:
-    """
-    Loads the checkpoint with the given number and returns it.
-    """
-    global CHECKPOINT_DIR, CHECKPOINT_COUNTER, df
-    # Delete the Old DataFrame from memory
-    if 'df' in globals():
-        del df
-    if reset:
-        CHECKPOINT_COUNTER = checkpoint_number
-    print(f'Loading checkpoint {checkpoint_number}...')
-    return fix_types(pd.read_csv(f'{CHECKPOINT_DIR}/checkpoint_{checkpoint_number}.csv'))
-
-
-# In[10]:
 
 
 def feature_engineer(name: str, message: str, type: str):
@@ -408,7 +362,7 @@ def empty_folders():
     """
     Empties a folder by deleting all files and subdirectories.
     """
-    for folder_path in [FIGURES_DIR, CHECKPOINT_DIR, ENCODE_TABLES_DIR, IMPUTE_TABLES_DIR, LOOKUP_TABLES_DIR]:
+    for folder_path in [FIGURES_DIR, CHECKPOINT_DIR, ENCODE_TABLES_DIR, IMPUTE_TABLES_DIR]:
         if os.path.exists(folder_path):
             if os.path.isdir(folder_path):
                 for root, dirs, files in os.walk(folder_path):

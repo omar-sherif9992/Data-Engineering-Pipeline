@@ -1,16 +1,17 @@
+# Use an official Python runtime as a parent image
 FROM python:3.11
 
+# Set the working directory to /app
 WORKDIR /app
 
-# Copy requirements.txt first to leverage Docker layer caching
-COPY requirements.txt .
+# Copy the requirements.txt into the container
 
-# Install dependencies
-RUN pip install -r requirements.txt
+COPY requirements.txt /app/
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 
-# Expose the desired port (if needed)
-EXPOSE 8888
 
-# Set the entrypoint
-ENTRYPOINT ["python", "src/main.py"]
+# Run main.py when the container launches
+CMD ["python", "src/main.py"]
