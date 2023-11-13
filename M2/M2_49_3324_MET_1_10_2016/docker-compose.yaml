@@ -1,0 +1,50 @@
+version: "3.9"
+
+volumes: 
+  green_taxi_10_2016_postgres:
+
+services:
+  pgdatabase:
+    container_name: pgdatabase
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=green_taxi
+    volumes:
+      - green_taxi_10_2016_postgres:/var/lib/postgresql/data:rw
+      - ./m2_queries:/var/lib/:rw
+    ports:
+      - "5432:5432"
+
+
+  preprocessing_ingestion:
+    container_name: preprocessing_ingestion
+    build: ./python_image
+    image: preprocessing_ingestion
+    volumes:
+      - "./python_image:/app/:rw"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      - pgdatabase
+    restart: on-failure
+# Make sure that you close tab that were connected to pgAdmin before start the container.
+
+  pgadmin:
+    container_name: pgadmin4
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - preprocessing_ingestion
+    ports:
+      - "8080:80"
+    restart: on-failure
+
+
+
