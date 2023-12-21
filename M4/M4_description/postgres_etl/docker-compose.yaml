@@ -1,0 +1,19 @@
+services:
+  pgdatabase:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=titanic_etl
+    volumes:
+      - "titanic_etl_postgres:/var/lib/postgresql/data:rw"
+    ports:
+      - "5432:5432"    
+    networks:
+      - airflow
+volumes:
+  titanic_etl_postgres:
+networks:
+  airflow:
+    external:
+      name: airflow_default  
