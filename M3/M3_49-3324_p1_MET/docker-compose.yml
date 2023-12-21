@@ -1,0 +1,32 @@
+version: "3.9"
+volumes: 
+  yellow_taxi_10_2016_postgres:
+
+services:
+
+  big_data_course:
+    container_name: pyspark
+    image: stephanegaiffas/big_data_course:v2
+    ports:
+      - "8888:8888"
+      - "4040:4040"
+    volumes:
+      - "./:/opt/polynote/notebooks/"
+    restart: always
+    environment:
+      - PYSPARK_ALLOW_INSECURE_GATEWAY=1
+    
+  pgdatabase:
+    container_name: pgdatabase
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=yellow_taxi
+    volumes:
+      - yellow_taxi_10_2016_postgres:/var/lib/postgresql/data:rw
+    ports:
+      - "5432:5432"
+    depends_on:
+      - big_data_course
+
