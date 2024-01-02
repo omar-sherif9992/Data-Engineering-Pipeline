@@ -6,7 +6,7 @@
 <br/>
 
 
-  <h3 align="center">Egyptian Tweet Sentiment Analysis , Forecasting and Topic Modeling</h3>
+  <h3 align="center">clean, impute, handle outliers, feature engineer, visualize, analyze, containerize, parallelize workload, and build a pipeline </h3>
 
   <p align="center">
 The 4 Milestones aim to build a Data Engineering Pipeline
@@ -27,15 +27,14 @@ The 4 Milestones aim to build a Data Engineering Pipeline
 
 ### Milestone 1
 
-The goal of this milestone is to load a csv file,perform exploratory data analysis
-with visualization, extract additional data,perform feature engineering and pre-
+The goal of this milestone is to load a csv file, perform exploratory data analysis
+with visualization, extract additional data, perform feature engineering and pre-
 process the data for downstream cases such as ML and data analysis.
 The dataset you will be working on is NYC green taxis dataset. It contains records
-about trips conducted in NYC through green taxis. Dataset description can be
-found on the cms.
-There are multiple datasets for this case study(a dataset for each month). You can
-find which dataset you are assigned to in the zip folder named 'Milestone 1' on
-the CMS. Download your dataset from here.
+about trips conducted in NYC through green taxis. 
+
+There are multiple datasets for this case study(a dataset for each month). 
+Download [dataset](https://drive.google.com/drive/folders/1t8nBgbHVaA5roZY4z3RcAG1_JMYlSTqu) from here.
 
 **My dataset was 10/2016**, the code is reproducible and can work with any month/year
 
@@ -55,7 +54,7 @@ the yellow taxis dataset).
 
 ### Milestone 4
 
-For this milestone, we where required to orchestrate the tasks performed in
+For this milestone, we were required to orchestrate the tasks performed in
 milestones 1 and 2 using Airflow in Docker. For this milestone, we will primarily
 work on the green dataset and pre-process using pandas only for simplicity.
 The tasks you have performed in milestones 1 and 2 were as follows.
