@@ -26,6 +26,7 @@ The 4 Milestones aim to build a Data Engineering Pipeline
 ## 💡 Description
 This project focused on NYC taxi data. It started by studying and improving the dataset for green taxis, doing things like organizing, visualizing, and preparing the data for later analysis or machine learning. The work was made into easy-to-use packages using Docker, allowing it to be moved and used easily. It was then put into a PostgreSQL database for easy access. Using PySpark, similar steps were taken for yellow taxi data. Later, tasks were organized using Airflow in Docker, making it easier to clean, change, and add data. Overall, this project showed skills in handling data, making it better, and organizing tasks efficiently.
 
+**Note: Every Milestone Folder have it's own Readme for How to use it**
 
 ### Milestone 1
 
