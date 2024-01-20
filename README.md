@@ -28,7 +28,7 @@ This project focused on NYC taxi data. It started by studying and improving the 
 
 **Note: Every Milestone Folder have it's own Readme for How to use it**
 
-### Milestone 1
+### Milestone 1 (Data Preparation and Exploration (Green Taxis))
 
 The goal of this milestone is to load a csv file, perform exploratory data analysis
 with visualization, extract additional data, perform feature engineering and pre-
@@ -41,13 +41,13 @@ Download [dataset](https://drive.google.com/drive/folders/1t8nBgbHVaA5roZY4z3RcA
 
 **My dataset was 10/2016**, the code is reproducible and can work with any month/year
 
-### Milestone 2
+### Milestone 2  (Docker Packaging and PostgreSQL Integration)
 The objective of this milestone is to package your milestone 1 code in a docker
 image that can be run anywhere. In addition, you will load your cleaned and
 prepared dataset as well as your lookup table into a PostgreSQL database which
 would act as your data warehouse.
 
-### Milestone 3
+### Milestone 3 (Preprocessing Yellow Taxis Data with PySpark)
 The goal of this milestone is to preprocess the dataset 'New York yellow taxis' by performing
 basic data preparation and basic analysis to gain a better understanding of the data using
 PySpark.
@@ -55,7 +55,7 @@ Use the same month and year you used for the green taxis in milestone 1. [Datase
 the yellow taxis dataset).
 
 
-### Milestone 4
+### Milestone 4 (Airflow Orchestration of Tasks)
 
 For this milestone, we were required to orchestrate the tasks performed in
 milestones 1 and 2 using Airflow in Docker. For this milestone, we will primarily
